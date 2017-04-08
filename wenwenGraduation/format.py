@@ -6,7 +6,8 @@ if __name__ == '__main__':
     text = '今天是个好日子'
     format = 'json'
     pattern = 'dp'
-    result = urllib2.urlopen( "%sapi_key=%s&text=%s&format=%s&pattern=%s" % (url_get_base,api_key,text,format,pattern))
+    result = urllib2.urlopen( "%sapi_key=%s&text=%s&format=%s&pattern=%s" % \
+                             (url_get_base, api_key, text, format, pattern))
     content = result.read().strip()
     #print content
     js = json.loads(content)
@@ -23,7 +24,8 @@ if __name__ == '__main__':
         api_key = 'i1o4P9M192j2l7y1U1I1lrhhyyeAaZrmTqdXhXsj'
         format = 'json'
         pattern = 'dp'
-        url = "%sapi_key=%s&text=%s&format=%s&pattern=%s" % (url_get_base,api_key,line,format,pattern)
+        url = "%sapi_key=%s&text=%s&format=%s&pattern=%s" % \
+            (url_get_base, api_key, line, format, pattern)
         result = requests.get(url).content
         #result = urllib2.urlopen(url)
         content = result.strip()
