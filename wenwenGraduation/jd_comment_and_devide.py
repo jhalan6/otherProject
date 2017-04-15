@@ -70,7 +70,7 @@ def devide_sentence_env():
     api_key = 'i1o4P9M192j2l7y1U1I1lrhhyyeAaZrmTqdXhXsj'
     format = 'json'
     pattern = 'dp'
-    url_get_base = "http://ltpapi.voicecloud.cn/analysis/?"
+    url_get_base = "http://ltpapi.voicecloud.cn/analysis/"
 
 
 def write_to_file(file_name, lines):
@@ -83,14 +83,21 @@ def write_to_file(file_name, lines):
 def write_devide_sentence_and_content_to_file():
     file_result = []
     for line in open("contents.txt"):
-        url = "%sapi_key=%s&text=%s&format=%s&pattern=%s" % \
-            (url_get_base, api_key, line, format, pattern)
-        result = requests.get(url).content
+        # url = "%s?api_key=%s&text=%s&format=%s&pattern=%s" % \
+            # (url_get_base, api_key, line, format, pattern)
+        # result = requests.get(url).content
+        request_data = {"api_key": "i1o4P9M192j2l7y1U1I1lrhhyyeAaZrmTqdXhXsj",
+                        "text": unicode(line),
+                        "pattern": "ws",
+                        "format": "json"}
+
+        result = requests.post(url_get_base, data = request_data).content
         content = result.strip()
         js = json.loads(content)
         devided_words = ""
-        for data in js[0][0]:
-            devided_words = "%s,%s" % (devided_words, data['cont'])
+        for sent in js[0]:
+            for data in sent:
+                devided_words = "%s,%s" % (devided_words, data['cont'])
         file_result.append("%s|%s\n" % (line[:-1], devided_words))
     write_to_file("contents.csv", file_result)
     print "write to contents.csv done"
