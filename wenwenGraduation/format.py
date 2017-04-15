@@ -1,36 +1,50 @@
 # -*- coding:utf8 -*-
-import urllib2, json, sys, requests
-if __name__ == '__main__':
-    url_get_base = "http://ltpapi.voicecloud.cn/analysis/?"
+import json
+import sys
+import requests
+import codecs
+
+
+def solve_encode():
+    reload(sys)
+    sys.setdefaultencoding("utf-8")
+
+
+def devide_sentence_env():
+    global api_key
+    global format
+    global pattern
+    global url_get_base
     api_key = 'i1o4P9M192j2l7y1U1I1lrhhyyeAaZrmTqdXhXsj'
-    text = '今天是个好日子'
     format = 'json'
     pattern = 'dp'
-    result = urllib2.urlopen( "%sapi_key=%s&text=%s&format=%s&pattern=%s" % \
-                             (url_get_base, api_key, text, format, pattern))
-    content = result.read().strip()
-    #print content
-    js = json.loads(content)
-    #for data in js[0][0]:
-        #print 'id:%s\trelate:%s\tpos:%s\tparent:%s\tcont:%s' % (data['id'], data['relate'], data['pos'], data['parent'], data['cont'])
-    #for data in js[0][0]:
-        #print '%s|%s|%s|%s|%s' % (data['id'], data['relate'], data['pos'], data['parent'], data['cont'])
+    url_get_base = "http://ltpapi.voicecloud.cn/analysis/?"
 
 
+def write_to_file(lines):
+    f = codecs.open("contents.csv", "w", "utf-8")
+    for line in lines:
+        f.write(line)
+    f.close()
 
+
+def main():
     query = sys.argv[1]
+    file_result = []
     for line in open(query):
-        url_get_base = "http://ltpapi.voicecloud.cn/analysis/?"
-        api_key = 'i1o4P9M192j2l7y1U1I1lrhhyyeAaZrmTqdXhXsj'
-        format = 'json'
-        pattern = 'dp'
         url = "%sapi_key=%s&text=%s&format=%s&pattern=%s" % \
             (url_get_base, api_key, line, format, pattern)
         result = requests.get(url).content
-        #result = urllib2.urlopen(url)
         content = result.strip()
-        #print content
         js = json.loads(content)
+        devided_words = ""
         for data in js[0][0]:
-            print ('%s|%s|%s|%s|%s' % (data['id'], data['relate'], data['pos'], data['parent'], data['cont'])).encode('utf8')
-        print '||||'
+            devided_words = "%s,%s" % (devided_words, data['cont'])
+        file_result.append("%s|%s\n" % (line, devided_words))
+    write_to_file(file_result)
+
+
+if __name__ == '__main__':
+    solve_encode()
+    devide_sentence_env()
+    main()

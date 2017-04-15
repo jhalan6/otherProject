@@ -2,7 +2,7 @@
 #coding:utf-8
 #Author:yunya  Created: 2016/12/6
 #copy from http://www.yunya.pw/?post=18
-import urllib2, re, random, time, sys
+import urllib2, re, random, time, sys, codecs
 import pandas as pd
 
 
@@ -18,6 +18,7 @@ def main():
             pid + "&score=0&sortType=3&page=" + str(page) + \
             "&pageSize=10&callback=fetchJSON_comment98vv37464"
 
+        print url
         ws1 = urllib2.urlopen(url).read()
         groups = re.findall('''\{"id":\d+,.*?,"content":"((?:(?!<\/div>).|\n)*?)",.*?,"referenceTime":"(.*?)",.*?,"replyCount":(\d+),"score":(\d+),"status":\d,"title":"","usefulVoteCount":(\d+),.*?,"userLevelId":"(.*?)","userProvince":"(.*?)",.*?,"nickname":"(.*?)","userClient":(\d+),''', ws1)
         for g in groups:
@@ -43,6 +44,16 @@ def main():
                        "client":l_client})
     df.to_csv('file.csv', index = False)
     print "done.."
+    f = codecs.open("contents.txt", "w", "utf-8")
+    #f=file("contents.txt","a+")
+    for line in l_cmt:
+        #f.write(unicode(("%s\n" % line), "utf-8"))
+        f.write(("%s\n" % line).decode('gbk','ignore').encode('utf-8'))
+    f.close()
 
 if __name__ == "__main__":
+    defaultencoding = 'utf-8'
+    if sys.getdefaultencoding() != defaultencoding:
+        reload(sys)
+        sys.setdefaultencoding(defaultencoding)
     main()
