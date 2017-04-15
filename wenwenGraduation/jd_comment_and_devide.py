@@ -91,7 +91,7 @@ def write_devide_sentence_and_content_to_file():
         devided_words = ""
         for data in js[0][0]:
             devided_words = "%s,%s" % (devided_words, data['cont'])
-        file_result.append("%s|%s\n" % (line, devided_words))
+        file_result.append("%s|%s\n" % (line[:-1], devided_words))
     write_to_file("contents.csv", file_result)
     print "write to contents.csv done"
 
