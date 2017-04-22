@@ -2,6 +2,7 @@
 # coding:utf-8
 # Author:yunya  Created: 2016/12/6
 # copy from http://www.yunya.pw/?post=18
+from __future__ import division
 import urllib2
 import re
 import json
@@ -13,6 +14,10 @@ import requests
 import pandas as pd
 from pprint import pprint
 
+
+def solve_encode():
+        reload(sys)
+        sys.setdefaultencoding("utf-8")
 
 def get_comments_from_jd():
         l_cmt, l_time, l_like, l_score, l_reply, l_level, l_prov, l_nn, l_client = [
@@ -64,11 +69,6 @@ def get_comments_from_jd():
         print "write contents.txt done"
 
 
-def solve_encode():
-        reload(sys)
-        sys.setdefaultencoding("utf-8")
-
-
 def init_devide_sentence_env():
         global api_key
         global format
@@ -100,37 +100,121 @@ def fetch_all_words_from_yu_yin_yun():
                 result = requests.post(url_get_base, data=request_data).content
                 content = result.strip()
                 js = json.loads(content)
-                devided_words = ""
+                devided_words = []
                 for sent in js[0]:
                         for data in sent:
-                                devided_words = "%s,%s" % (
-                                    devided_words, data['cont'])
+                                devided_words.append(data['cont'])
+                                #devided_words = "%s,%s" % (
+                                    #devided_words, data['cont'])
                 all_words[line[:-1]] = devided_words
 
 
 def write_devide_sentence_and_content_to_file():
         file_result = []
         for sentence in all_words.keys():
-                file_result.append("%s|%s\n" % (sentence, all_words[sentence]))
+                file_result.append("%s|%s\n" % (sentence, ','.join(all_words[sentence])))
         write_to_file("contents.csv", file_result)
         print "write to contents.csv done"
 
 
 def filt_all_word_set():
-        global words_set
-        words_set = set()
+        global all_words_set
+        all_words_set = set()
         for words in all_words.values():
-            for word in words.split(','):
-                words_set.add(word)
+            for word in words:
+                all_words_set.add(word)
 
 
-def read_all_positive_words():
-        global positive_words
-        positive_words = set()
+def read_all_positive_and_negative_words():
+        global all_positive_words
+        global all_negative_words
+        all_positive_words = set()
+        all_negative_words = set()
         for line in open("positive_words.txt"):
-            positive_words.add(line)
-        for word in positive_words:
-            print word
+            all_positive_words.add(line.decode('utf8')[:-1])
+            #print chardet.detect(str(line).encode('utf8'))['encoding']
+        for line in open("negative_words.txt"):
+            all_negative_words.add(line.decode('utf8')[:-1])
+        # 去掉注释可以输出数据的内容
+        #for word in all_positive_words:
+            #print word
+        #for word in all_negative_words:
+            #print word
+
+
+
+def count_positive_score_of_all_words():
+        global positive_score
+        positive_score = {}
+        for word in all_words_set:
+            for positive_word in all_positive_words:
+                sentence_count = len(all_words)
+                match_count = 0
+                for sentence_word_list in all_words.values():
+                    #去掉注释可以看到匹配过程
+                    #print word,positive_word,json.dumps(sentence_word_list, encoding="UTF-8", ensure_ascii=False)
+                    if word in sentence_word_list and positive_word in sentence_word_list:
+                        #print 'match'
+                        match_count += 1
+                probability = match_count /sentence_count
+                #if probability > 0:
+                    #print "%s 和 %s 同时出现的概率为 %f" %(word, positive_word, probability)
+                if word not in positive_score:
+                    positive_score[word] = {}
+                positive_score[word][positive_word]=probability
+        global total_positive_score
+        total_positive_score = {}
+        for word in positive_score.keys():
+            total_score = 0.0
+            for score in positive_score[word].values():
+                total_score += score
+            #print "%s 积极情感词得分 %f" %(word, total_score)
+            total_positive_score[word] = total_score
+
+
+
+def count_negative_score_of_all_words():
+        global negative_score
+        negative_score = {}
+        for word in all_words_set:
+            for negative_word in all_negative_words:
+                sentence_count = len(all_words)
+                match_count = 0
+                for sentence_word_list in all_words.values():
+                    #去掉注释可以看到匹配过程
+                    #print word,negative_word,json.dumps(sentence_word_list, encoding="UTF-8", ensure_ascii=False)
+                    if word in sentence_word_list and negative_word in sentence_word_list:
+                        #print 'match'
+                        match_count += 1
+                probability = match_count /sentence_count
+                #if probability > 0:
+                    #print "%s 和 %s 同时出现的概率为 %f" %(word, negative_word, probability)
+                if word not in negative_score:
+                    negative_score[word] = {}
+                negative_score[word][negative_word]=probability
+        global total_negative_score
+        total_negative_score = {}
+        for word in negative_score.keys():
+            total_score = 0.0
+            for score in negative_score[word].values():
+                total_score -= score
+            #print "%s消极情感词得分 %f" %(word, total_score)
+            total_negative_score[word] = total_score
+
+
+def count_total_score():
+    for word in all_words_set:
+        total_score = total_positive_score[word] + total_negative_score[word]
+        print "%s 总得分 %f" % (word, total_score)
+
+def write_total_score_to_file():
+    file_result = []
+    for word in all_words_set:
+        total_score = total_positive_score[word] + total_negative_score[word]
+        file_result.append("%s|%f\n" % (word, total_score))
+        #print "%s 总得分 %f" % (word, total_score)
+    write_to_file("total_score.csv", file_result)
+    print "write to total_score.csv done"
 
 
 
@@ -141,7 +225,10 @@ def main():
         fetch_all_words_from_yu_yin_yun()
         write_devide_sentence_and_content_to_file()
         filt_all_word_set()
-        read_all_positive_words()
+        read_all_positive_and_negative_words()
+        count_positive_score_of_all_words()
+        count_negative_score_of_all_words()
+        write_total_score_to_file()
 
 
 if __name__ == '__main__':
