@@ -231,13 +231,21 @@ def count_negative_pmi_of_all_words():
             total_negative_pmi[word] = total_pmi
 
 
+def count_total_pmi():
+        global all_word_total_pmi
+        all_word_total_pmi = {}
+        for word in all_words_set:
+            total_pmi = total_positive_pmi[word] + total_negative_pmi[word]
+            all_word_total_pmi[word] = total_pmi
+            #print "%s 的PMI 总和 %f" % (word, total_pmi)
+
+
 
 def write_total_pmi_to_file():
     file_result = []
-    for word in all_words_set:
-        total_pmi = total_positive_pmi[word] + total_negative_pmi[word]
-        file_result.append("%s|%f\n" % (word, total_pmi))
-        print "%s 的PMI 总和 %f" % (word, total_pmi)
+    for word in all_word_total_pmi.keys():
+        file_result.append("%s|%f\n" % (word, all_word_total_pmi[word]))
+        print "%s 的PMI 总和 %f" % (word, all_word_total_pmi[word])
     write_to_file("total_pmi.csv", file_result)
     print "write to total_pmi.csv done"
 
@@ -253,6 +261,7 @@ def main():
         read_all_positive_and_negative_words()
         count_positive_pmi_of_all_words()
         count_negative_pmi_of_all_words()
+        count_total_pmi()
         write_total_pmi_to_file()
 
 
