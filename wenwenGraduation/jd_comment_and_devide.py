@@ -190,7 +190,7 @@ def count_total_pmi(total_positive_pmi, total_negative_pmi):
         global all_word_total_pmi
         all_word_total_pmi = {}
         for word in all_words_set:
-            total_pmi = total_positive_pmi[word] + total_negative_pmi[word]
+            total_pmi = total_positive_pmi[word] - total_negative_pmi[word]
             all_word_total_pmi[word] = total_pmi
             print "%s 的PMI 总和 %f" % (word, total_pmi)
 
