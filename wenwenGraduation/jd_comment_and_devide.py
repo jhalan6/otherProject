@@ -93,7 +93,7 @@ def fetch_all_words_from_yu_yin_yun():
         all_words = {}
         for line in open("contents.txt"):
                 request_data = {
-                    "api_key":api_key,
+                    "api_key": api_key,
                     "text": unicode(line),
                     "pattern": pattern,
                     "format": format}
@@ -105,8 +105,6 @@ def fetch_all_words_from_yu_yin_yun():
                 for sent in js[0]:
                         for data in sent:
                                 devided_words.append(data['cont'])
-                                #devided_words = "%s,%s" % (
-                                    #devided_words, data['cont'])
                 all_words[line[:-1]] = devided_words
 
 
@@ -141,6 +139,61 @@ def read_all_positive_and_negative_words():
             #print word
         #for word in all_negative_words:
             #print word
+
+def count_pmi_of_all_words_v2(all_words_set, known_dictionary, devided_passages):
+        sentence_count = len(devided_passages)
+        word_passage = {}
+        word_show_probility_list = {}
+        for word in all_words_set:
+            for devided_passage in devided_passages:
+                if word in devided_passage:
+                    if word not in word_passage:
+                        word_passage[word] = []
+                    word_passage[word].append(devided_passage)
+            word_show_probility_list[word] = len(word_passage[word]) / sentence_count
+
+
+
+        dict_word_probility_list = {}
+        for dict_word in known_dictionary:
+            show_count = 0
+            for devided_passage in devided_passages:
+                if dict_word in devided_passage:
+                    show_count += 1
+            dict_word_probility_list[dict_word] = show_count / sentence_count
+
+
+        all_pmi = {}
+        for word in all_words_set:
+            for dict_word in known_dictionary:
+                match_count = 0
+                for sentence_word_list in word_passage[word]:
+                    if dict_word in sentence_word_list:
+                        #print 'match'
+                        match_count += 1
+                probability_match = match_count / sentence_count
+                probability_word = word_show_probility_list.get(word, 0)
+                probability_dict_word = dict_word_probility_list.get(dict_word, 0)
+                #if probability_match > 0:
+                    #print "%s 和 %s 同时出现的概率为 %f" %(word, positive_word, probability)
+                if word not in all_pmi:
+                    all_pmi[word] = {}
+                #print "word:%f, dict_word:%f, match:%f"%(probability_word, probability_dict_word, probability_match)
+                if probability_dict_word * probability_word * probability_match == 0.0:
+                    pmi = 0
+                else:
+                    pmi = math.log(probability_match / (probability_word * probability_dict_word), 2)
+                    #print "%s, %s PMI = %f" % (word, dict_word, pmi)
+                all_pmi[word][dict_word] = pmi
+        total_pmi = {}
+        for word in all_pmi.keys():
+            total_pmi_for_this_word = 0.0
+            for pmi in all_pmi[word].values():
+                total_pmi_for_this_word += pmi
+            #print "%s 词典pmi得分 %f" %(word, total_pmi_for_this_word)
+            total_pmi[word] = total_pmi_for_this_word
+        return total_pmi
+
 
 
 
@@ -213,8 +266,10 @@ def main():
         write_devide_sentence_and_content_to_file()
         filt_all_word_set()
         read_all_positive_and_negative_words()
-        positive_pmi = count_pmi_of_all_words(all_words_set, all_positive_words, all_words.values())
-        negative_pmi = count_pmi_of_all_words(all_words_set, all_negative_words, all_words.values())
+        positive_pmi = count_pmi_of_all_words_v2(all_words_set, all_positive_words, all_words.values())
+        negative_pmi = count_pmi_of_all_words_v2(all_words_set, all_negative_words, all_words.values())
+        #positive_pmi = count_pmi_of_all_words(all_words_set, all_positive_words, all_words.values())
+        #negative_pmi = count_pmi_of_all_words(all_words_set, all_negative_words, all_words.values())
         count_total_pmi(positive_pmi, negative_pmi)
         write_total_pmi_to_file()
 
