@@ -93,10 +93,10 @@ def fetch_all_words_from_yu_yin_yun():
         all_words = {}
         for line in open("contents.txt"):
                 request_data = {
-                    "api_key": "i1o4P9M192j2l7y1U1I1lrhhyyeAaZrmTqdXhXsj",
+                    "api_key":api_key,
                     "text": unicode(line),
-                    "pattern": "ws",
-                    "format": "json"}
+                    "pattern": pattern,
+                    "format": format}
 
                 result = requests.post(url_get_base, data=request_data).content
                 content = result.strip()
@@ -144,100 +144,55 @@ def read_all_positive_and_negative_words():
 
 
 
-def count_positive_pmi_of_all_words():
-        global positive_pmi
-        positive_pmi = {}
+def count_pmi_of_all_words(all_words_set, known_dictionary, devided_passages):
+        sentence_count = len(devided_passages)
+        all_pmi = {}
         for word in all_words_set:
-            for positive_word in all_positive_words:
-                sentence_count = len(all_words)
+            for dict_word in known_dictionary:
                 match_count = 0
                 word_show_count = 0
-                positive_count = 0
-                for sentence_word_list in all_words.values():
+                dict_word_show_count = 0
+                for sentence_word_list in devided_passages:
                     if word in sentence_word_list:
                         word_show_count += 1
-                    if positive_word in sentence_word_list:
-                        positive_count += 1
+                    if dict_word in sentence_word_list:
+                        dict_word_show_count += 1
                     #去掉注释可以看到匹配过程
                     #print word,positive_word,json.dumps(sentence_word_list, encoding="UTF-8", ensure_ascii=False)
-                    if word in sentence_word_list and positive_word in sentence_word_list:
+                    if word in sentence_word_list and dict_word in sentence_word_list:
                         #print 'match'
                         match_count += 1
                 probability_match = match_count / sentence_count
                 probability_word = word_show_count / sentence_count
-                probability_positive = positive_count / sentence_count
+                probability_dict_word = dict_word_show_count / sentence_count
                 #if probability_match > 0:
                     #print "%s 和 %s 同时出现的概率为 %f" %(word, positive_word, probability)
-                if word not in positive_pmi:
-                    positive_pmi[word] = {}
-                #print "word:%f, positive:%f, match:%f"%(probability_word, probability_positive, probability_match)
-                if probability_positive * probability_word * probability_match == 0.0:
-                    pmi_word_positive = 0
+                if word not in all_pmi:
+                    all_pmi[word] = {}
+                #print "word:%f, dict_word:%f, match:%f"%(probability_word, probability_dict_word, probability_match)
+                if probability_dict_word * probability_word * probability_match == 0.0:
+                    pmi = 0
                 else:
-                    pmi_word_positive = math.log(probability_match /(probability_word * probability_positive), 2)
-                    print "%s, %s PMI = %f" % (word, positive_word, pmi_word_positive)
-                positive_pmi[word][positive_word] = pmi_word_positive
-        global total_positive_pmi
-        total_positive_pmi = {}
-        for word in positive_pmi.keys():
-            total_pmi = 0.0
-            for pmi in positive_pmi[word].values():
-                total_pmi += pmi
-            #print "%s 积极情感词pmi得分 %f" %(word, total_pmi)
-            total_positive_pmi[word] = total_pmi
+                    pmi = math.log(probability_match /(probability_word * probability_dict_word), 2)
+                    #print "%s, %s PMI = %f" % (word, dict_word, pmi)
+                all_pmi[word][dict_word] = pmi
+        total_pmi = {}
+        for word in all_pmi.keys():
+            total_pmi_for_this_word = 0.0
+            for pmi in all_pmi[word].values():
+                total_pmi_for_this_word += pmi
+            #print "%s 积极情感词pmi得分 %f" %(word, total_pmi_for_this_word)
+            total_pmi[word] = total_pmi_for_this_word
+        return total_pmi
 
 
-
-def count_negative_pmi_of_all_words():
-        global negative_pmi
-        negative_pmi = {}
-        for word in all_words_set:
-            for negative_word in all_negative_words:
-                sentence_count = len(all_words)
-                match_count = 0
-                word_show_count = 0
-                negative_count = 0
-                for sentence_word_list in all_words.values():
-                    if word in sentence_word_list:
-                        word_show_count += 1
-                    if negative_word in sentence_word_list:
-                        negative_count += 1
-                    #去掉注释可以看到匹配过程
-                    #print word,negative_word,json.dumps(sentence_word_list, encoding="UTF-8", ensure_ascii=False)
-                    if word in sentence_word_list and negative_word in sentence_word_list:
-                        #print 'match'
-                        match_count += 1
-                probability_match = match_count / sentence_count
-                probability_word = word_show_count / sentence_count
-                probability_negative = negative_count / sentence_count
-                #if probability_match > 0:
-                    #print "%s 和 %s 同时出现的概率为 %f" %(word, negative_word, probability)
-                if word not in negative_pmi:
-                    negative_pmi[word] = {}
-                #print "word:%f, negative:%f, match:%f"%(probability_word, probability_negative, probability_match)
-                if probability_negative * probability_word * probability_match == 0.0:
-                    pmi_word_negative = 0
-                else:
-                    pmi_word_negative = math.log(probability_match /(probability_word * probability_negative), 2)
-                    print "%s, %s PMI = %f" % (word, negative_word, pmi_word_negative)
-                negative_pmi[word][negative_word] = pmi_word_negative
-        global total_negative_pmi
-        total_negative_pmi = {}
-        for word in negative_pmi.keys():
-            total_pmi = 0.0
-            for pmi in negative_pmi[word].values():
-                total_pmi -= pmi
-            #print "%s 消极情感词pmi得分 %f" %(word, total_pmi)
-            total_negative_pmi[word] = total_pmi
-
-
-def count_total_pmi():
+def count_total_pmi(total_positive_pmi, total_negative_pmi):
         global all_word_total_pmi
         all_word_total_pmi = {}
         for word in all_words_set:
             total_pmi = total_positive_pmi[word] + total_negative_pmi[word]
             all_word_total_pmi[word] = total_pmi
-            #print "%s 的PMI 总和 %f" % (word, total_pmi)
+            print "%s 的PMI 总和 %f" % (word, total_pmi)
 
 
 
@@ -259,9 +214,9 @@ def main():
         write_devide_sentence_and_content_to_file()
         filt_all_word_set()
         read_all_positive_and_negative_words()
-        count_positive_pmi_of_all_words()
-        count_negative_pmi_of_all_words()
-        count_total_pmi()
+        positive_pmi = count_pmi_of_all_words(all_words_set, all_positive_words, all_words.values())
+        negative_pmi = count_pmi_of_all_words(all_words_set, all_negative_words, all_words.values())
+        count_total_pmi(positive_pmi, negative_pmi)
         write_total_pmi_to_file()
 
 
