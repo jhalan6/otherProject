@@ -181,7 +181,7 @@ def count_pmi_of_all_words(all_words_set, known_dictionary, devided_passages):
             total_pmi_for_this_word = 0.0
             for pmi in all_pmi[word].values():
                 total_pmi_for_this_word += pmi
-            #print "%s 积极情感词pmi得分 %f" %(word, total_pmi_for_this_word)
+            #print "%s 词典pmi得分 %f" %(word, total_pmi_for_this_word)
             total_pmi[word] = total_pmi_for_this_word
         return total_pmi
 
@@ -193,7 +193,6 @@ def count_total_pmi(total_positive_pmi, total_negative_pmi):
             total_pmi = total_positive_pmi[word] - total_negative_pmi[word]
             all_word_total_pmi[word] = total_pmi
             print "%s 的PMI 总和 %f" % (word, total_pmi)
-
 
 
 def write_total_pmi_to_file():
