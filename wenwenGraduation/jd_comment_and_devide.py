@@ -134,6 +134,12 @@ def read_all_positive_and_negative_words():
             #print chardet.detect(str(line).encode('utf8'))['encoding']
         for line in open("negative_words.txt"):
             all_negative_words.add(line.decode('utf8')[:-1])
+        global used_positive_words
+        global used_negative_words
+        used_positive_words = all_positive_words & all_words_set
+        used_negative_words = all_negative_words & all_words_set
+        print "使用到的积极词%d个" % len(used_positive_words)
+        print "使用到的消极词%d个" % len(used_negative_words)
         # 去掉注释可以输出数据的内容
         #for word in all_positive_words:
             #print word
@@ -266,8 +272,8 @@ def main():
         write_devide_sentence_and_content_to_file()
         filt_all_word_set()
         read_all_positive_and_negative_words()
-        positive_pmi = count_pmi_of_all_words_v2(all_words_set, all_positive_words, all_words.values())
-        negative_pmi = count_pmi_of_all_words_v2(all_words_set, all_negative_words, all_words.values())
+        positive_pmi = count_pmi_of_all_words_v2(all_words_set, used_positive_words, all_words.values())
+        negative_pmi = count_pmi_of_all_words_v2(all_words_set, used_negative_words, all_words.values())
         #positive_pmi = count_pmi_of_all_words(all_words_set, all_positive_words, all_words.values())
         #negative_pmi = count_pmi_of_all_words(all_words_set, all_negative_words, all_words.values())
         count_total_pmi(positive_pmi, negative_pmi)
