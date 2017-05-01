@@ -13,6 +13,8 @@ import sys
 import codecs
 import requests
 import pandas as pd
+import jieba
+import jieba.analyse
 from pprint import pprint
 
 
@@ -88,10 +90,9 @@ def write_to_file(file_name, lines):
         f.close()
 
 
-def fetch_all_words_from_yu_yin_yun():
-        global all_words
+def fetch_all_words_from_yu_yin_yun(file_name):
         all_words = {}
-        for line in open("contents.txt"):
+        for line in open(file_name):
                 request_data = {
                     "api_key": api_key,
                     "text": unicode(line),
@@ -106,9 +107,17 @@ def fetch_all_words_from_yu_yin_yun():
                         for data in sent:
                                 devided_words.append(data['cont'])
                 all_words[line[:-1]] = devided_words
+        return all_words
 
 
-def write_devide_sentence_and_content_to_file():
+def fetch_all_words_from_jieba(file_name):
+        all_words = {}
+        for line in open(file_name):
+            seg_list = list(jieba.cut(line, cut_all=True))
+            all_words[line[:-1]] = seg_list
+        return all_words
+
+def write_devide_sentence_and_content_to_file(all_words):
         file_result = []
         for sentence in all_words.keys():
                 file_result.append("%s|%s\n" % (sentence, ','.join(all_words[sentence])))
@@ -116,12 +125,11 @@ def write_devide_sentence_and_content_to_file():
         print "write to contents.csv done"
 
 
-def filt_all_word_set():
+def filt_all_word_set(all_words):
         global all_words_set
         all_words_set = set()
         for words in all_words.values():
-            for word in words:
-                all_words_set.add(word)
+            all_words_set = all_words_set | set(words)
 
 
 def read_all_positive_and_negative_words():
@@ -264,13 +272,22 @@ def write_total_pmi_to_file():
 
 
 
+def get_tag_by_jieba_keyword(sents):
+    for sent in sents:
+        tags = jieba.analyse.extract_tags(sent, 5)
+        pmi_list = []
+        for tag in tags:
+            pmi_list.append(all_word_total_pmi.get(tag, 0))
+        print '%s|%s|%s' % (sent, ','.join(tags), ','.join([str(item) for item in pmi_list]))
+
 def main():
         solve_encode()
         get_comments_from_jd()
-        init_devide_sentence_env()
-        fetch_all_words_from_yu_yin_yun()
-        write_devide_sentence_and_content_to_file()
-        filt_all_word_set()
+        #init_devide_sentence_env()
+        #all_words = fetch_all_words_from_yu_yin_yun("contents.txt")
+        all_words = fetch_all_words_from_jieba("contents.txt")
+        write_devide_sentence_and_content_to_file(all_words)
+        filt_all_word_set(all_words)
         read_all_positive_and_negative_words()
         positive_pmi = count_pmi_of_all_words_v2(all_words_set, used_positive_words, all_words.values())
         negative_pmi = count_pmi_of_all_words_v2(all_words_set, used_negative_words, all_words.values())
@@ -278,6 +295,7 @@ def main():
         #negative_pmi = count_pmi_of_all_words(all_words_set, all_negative_words, all_words.values())
         count_total_pmi(positive_pmi, negative_pmi)
         write_total_pmi_to_file()
+        get_tag_by_jieba_keyword(all_words.keys())
 
 
 if __name__ == '__main__':
