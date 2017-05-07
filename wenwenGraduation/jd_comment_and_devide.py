@@ -15,21 +15,29 @@ import requests
 import pandas as pd
 import jieba
 import jieba.analyse
-from pprint import pprint
 
 
 def solve_encode():
+        """
+            解决加载文件、输出等时候的编码问题
+        """
         reload(sys)
         sys.setdefaultencoding("utf-8")
 
 def get_comments_from_jd():
-        l_cmt, l_time, l_like, l_score, l_reply, l_level, l_prov, l_nn, l_client = [
-                ], [], [], [], [], [], [], [], []
+        """
+            在jd上抓取评论，并将评论写到两个文件中。
+            contents.txt中每一行放一条评论内容
+            file.csv中放了抓取步骤中拿到的全部数据。需要的时候可以读取。
+            本方法可以独立运行，即生成两个文本文件为后续功能提供准备工作。
+        """
+        l_cmt, l_time, l_like, l_score, l_reply, l_level, l_prov, l_nn, \
+            l_client = [], [], [], [], [], [], [], [], []
         result_lines = []
         pid = sys.argv[1]
         pages = int(sys.argv[2])
 
-        for page in range(pages):  # 12.13 edit
+        for page in range(pages):
                 print "Page %i ..." % (page + 1)
                 url = "https://sclub.jd.com/comment/productPageComments.action?productId=" +\
                     pid + "&score=0&sortType=3&page=" + str(page) + \
@@ -73,6 +81,9 @@ def get_comments_from_jd():
 
 
 def init_devide_sentence_env():
+        """
+            初始化语言云的分词时使用，如果不使用语言云的分词，可以不调用
+        """
         global api_key
         global format
         global pattern
@@ -84,6 +95,9 @@ def init_devide_sentence_env():
 
 
 def write_to_file(file_name, lines):
+        """
+            一个公用的基础方法，传入文件名及文件内容，以utf8的格式写入到文件中。
+        """
         f = codecs.open(file_name, "w", "utf-8")
         for line in lines:
                 f.write(line)
@@ -91,6 +105,18 @@ def write_to_file(file_name, lines):
 
 
 def fetch_all_words_from_yu_yin_yun(file_name):
+        """
+            从语言云对文件中的语句进行分词。
+            Args:
+                file_name : 需要分词的文件名。文件中每一行为一个句子
+            Returns:
+                all_words : 一个字典类型的数据。key是需要分词的句子，value是分词
+                    结果组成的一个list
+                    举例：{
+                    "今天是个好日子":["今天", "是个", "好", "日子"],
+                    "这个手机真不错":["这个", "手机", "真", "不错"]
+                    }
+        """
         all_words = {}
         for line in open(file_name):
                 request_data = {
@@ -111,13 +137,49 @@ def fetch_all_words_from_yu_yin_yun(file_name):
 
 
 def fetch_all_words_from_jieba(file_name):
+        """
+            利用jieba分词对文件中的语句进行分词。
+            Args:
+                file_name : 需要分词的文件名。文件中每一行为一个句子
+                    举例 : content.txt
+                    文件内容为:
+                        今天是个好日子
+                        这个手机真不错
+            Returns:
+                all_words : 一个字典类型的数据。key是需要分词的句子，value是分词
+                    结果组成的一个list
+                    举例：{
+                    "今天是个好日子":["今天", "是个", "好", "日子"],
+                    "这个手机真不错":["这个", "手机", "真", "不错"]
+                    }
+
+        """
         all_words = {}
         for line in open(file_name):
             seg_list = list(jieba.cut(line, cut_all=True))
             all_words[line[:-1]] = seg_list
         return all_words
 
+
 def write_devide_sentence_and_content_to_file(all_words):
+        """
+            将分词结果写入到文件中，以备使用
+            Args:
+                all_words: 一个字典类型的数据。key是需要分词的句子，value是分词
+                    结果组成的一个list
+                    举例：{
+                    "今天是个好日子":["今天", "是个", "好", "日子"],
+                    "这个手机真不错":["这个", "手机", "真", "不错"]
+                    }
+            Returns:
+                写入一个文件，文件名为contents.csv
+                格式为：
+                    分词原句|分词1,分词2,...
+                举例：
+                    今天是个好日子|今天,是个,好,日子
+                    这个手机真不错|这个,手机,真,不错
+        """
+
         file_result = []
         for sentence in all_words.keys():
                 file_result.append("%s|%s\n" % (sentence, ','.join(all_words[sentence])))
@@ -126,35 +188,77 @@ def write_devide_sentence_and_content_to_file(all_words):
 
 
 def filt_all_word_set(all_words):
+        """
+            把全部的分词内容，过滤成每个词仅出现一次的集合
+            Args:
+                all_words: 一个字典类型的数据。key是需要分词的句子，value是分词
+                    结果组成的一个list
+                    举例：{
+                    "今天是个好日子":["今天", "是个", "好", "日子"],
+                    "这个手机真不错":["这个", "手机", "真", "不错"],
+                    "我今天买手机":["我","今天","买","手机"]
+                    }
+            Returns:
+                all_words_set:在all_words中出现的所有词、每个词仅出现一遍
+                    举例:
+                        ("今天", "是个", "好", "日子", "这个", "手机",
+                            "真", "不错", "我","买")
+
+        """
         global all_words_set
         all_words_set = set()
         for words in all_words.values():
             all_words_set = all_words_set | set(words)
+        return all_words_set
 
 
-def read_all_positive_and_negative_words():
-        global all_positive_words
-        global all_negative_words
-        all_positive_words = set()
-        all_negative_words = set()
-        for line in open("positive_words.txt"):
-            all_positive_words.add(line.decode('utf8')[:-1])
+def read_words_dictionary(dictionary_file, all_words_set):
+        """
+            从词典文件中读取出全部词，并过滤出在所有评论中出现过的词
+            Args:
+                dictionary_file : 字典文件名
+                    文件内内容为每行一个词
+                all_words_set : 一个集合，集合中包括了all_words_set中用到的词
+            Returns:
+                dictionary_words : 所有词典中的词构成的一个集合
+                used_dicitionary_words : 所有词中用到的词典
+        """
+        dictionary_words = set()
+        for line in open(dictionary_file):
+            dictionary_words.add(line.decode('utf8')[:-1])
             #print chardet.detect(str(line).encode('utf8'))['encoding']
-        for line in open("negative_words.txt"):
-            all_negative_words.add(line.decode('utf8')[:-1])
-        global used_positive_words
-        global used_negative_words
-        used_positive_words = all_positive_words & all_words_set
-        used_negative_words = all_negative_words & all_words_set
-        print "使用到的积极词%d个" % len(used_positive_words)
-        print "使用到的消极词%d个" % len(used_negative_words)
-        # 去掉注释可以输出数据的内容
-        #for word in all_positive_words:
+        used_dictionary_words = dictionary_words & all_words_set
+        print "%s中使用到的词%d个" % (dictionary_file, len(used_dictionary_words))
+        #for word in dictionary_words:
             #print word
-        #for word in all_negative_words:
-            #print word
+        return dictionary_words, used_dictionary_words
+
+
 
 def count_pmi_of_all_words_v2(all_words_set, known_dictionary, devided_passages):
+        """
+            计算两组词中的PMI值(第二版，加速过的)
+            PMI根据两组词在一组文本中出现的频率特征进行计算
+            Args:
+                all_words_set : 所有出现过的词的集合
+                known_dictionary : 需要计算的词典词的集合
+                devided_passages : 分词过后的句子列表
+                    举例:
+                        [
+                            ["今天", "是个", "好", "日子"],
+                            ["这个", "手机", "真", "不错"],
+                            ["我","今天","买","手机"]
+                        ]
+            Returns:
+                total_pmi : all_words_set中的每一个词对应的PMI值
+                    举例:
+                        {
+                            "今天": 27.6,
+                            "买":3.8,
+                            “手机":7.7
+                        }
+
+        """
         sentence_count = len(devided_passages)
         word_passage = {}
         word_show_probility_list = {}
@@ -209,9 +313,31 @@ def count_pmi_of_all_words_v2(all_words_set, known_dictionary, devided_passages)
         return total_pmi
 
 
-
-
 def count_pmi_of_all_words(all_words_set, known_dictionary, devided_passages):
+        """
+            计算两组词中的PMI值(第一版)
+            PMI根据两组词在一组文本中出现的频率特征进行计算
+            Args:
+                all_words_set : 所有出现过的词的集合
+                known_dictionary : 需要计算的词典词的集合
+                devided_passages : 分词过后的句子列表
+                    举例:
+                        [
+                            ["今天", "是个", "好", "日子"],
+                            ["这个", "手机", "真", "不错"],
+                            ["我","今天","买","手机"]
+                        ]
+            Returns:
+                total_pmi : all_words_set中的每一个词对应的PMI值
+                    举例:
+                        {
+                            "今天": 27.6,
+                            "买":3.8,
+                            “手机":7.7
+                        }
+
+        """
+
         sentence_count = len(devided_passages)
         all_pmi = {}
         for word in all_words_set:
@@ -254,31 +380,48 @@ def count_pmi_of_all_words(all_words_set, known_dictionary, devided_passages):
 
 
 def count_total_pmi(total_positive_pmi, total_negative_pmi):
-        global all_word_total_pmi
+        """
+            根据两种PMI值，计算总的PMI值
+            Args:
+                total_positive_pmi : 词与积极情感词的对应关系
+                total_negative_pmi : 词与消极情感词的对应关系
+            Returns:
+                all_word_total_pmi : 词的PMI值
+        """
         all_word_total_pmi = {}
         for word in all_words_set:
             total_pmi = total_positive_pmi[word] - total_negative_pmi[word]
             all_word_total_pmi[word] = total_pmi
             print "%s 的PMI 总和 %f" % (word, total_pmi)
+        return all_word_total_pmi
 
 
-def write_total_pmi_to_file():
-    file_result = []
-    for word in all_word_total_pmi.keys():
-        file_result.append("%s|%f\n" % (word, all_word_total_pmi[word]))
-        print "%s 的PMI 总和 %f" % (word, all_word_total_pmi[word])
-    write_to_file("total_pmi.csv", file_result)
-    print "write to total_pmi.csv done"
+def write_total_pmi_to_file(all_word_total_pmi):
+        """
+            把所有词的PMI值写到文件中。留着后续使用
+        """
+        file_result = []
+        for word in all_word_total_pmi.keys():
+            file_result.append("%s|%f\n" % (word, all_word_total_pmi[word]))
+            print "%s 的PMI 总和 %f" % (word, all_word_total_pmi[word])
+        write_to_file("total_pmi.csv", file_result)
+        print "write to total_pmi.csv done"
 
 
 
-def get_tag_by_jieba_keyword(sents):
-    for sent in sents:
-        tags = jieba.analyse.extract_tags(sent, 5)
-        pmi_list = []
-        for tag in tags:
-            pmi_list.append(all_word_total_pmi.get(tag, 0))
-        print '%s|%s|%s' % (sent, ','.join(tags), ','.join([str(item) for item in pmi_list]))
+def get_tag_by_jieba_keyword(sents, all_words_total_pmi):
+        matlab_file_content = []
+        for sent in sents:
+            tags = jieba.analyse.extract_tags(sent, 5)
+            pmi_list = []
+            for tag in tags:
+                pmi_list.append(all_words_total_pmi.get(tag, 0))
+            while len(pmi_list) < 5 :
+                pmi_list.append(0)
+            print '%s|%s|%s' % (sent, ','.join(tags), ','.join([str(item) for item in pmi_list]))
+            matlab_file_content.append("%s\n" % (','.join([str(item) for item in pmi_list])))
+        write_to_file("sentences_pmi.txt", matlab_file_content)
+
 
 def main():
         solve_encode()
@@ -287,15 +430,16 @@ def main():
         #all_words = fetch_all_words_from_yu_yin_yun("contents.txt")
         all_words = fetch_all_words_from_jieba("contents.txt")
         write_devide_sentence_and_content_to_file(all_words)
-        filt_all_word_set(all_words)
-        read_all_positive_and_negative_words()
+        all_words_set = filt_all_word_set(all_words)
+        all_positive_words, used_positive_words = read_words_dictionary("positive_words.txt", all_words_set)
+        all_negative_words, used_negative_words = read_words_dictionary("negative_words.txt", all_words_set)
         positive_pmi = count_pmi_of_all_words_v2(all_words_set, used_positive_words, all_words.values())
         negative_pmi = count_pmi_of_all_words_v2(all_words_set, used_negative_words, all_words.values())
         #positive_pmi = count_pmi_of_all_words(all_words_set, all_positive_words, all_words.values())
         #negative_pmi = count_pmi_of_all_words(all_words_set, all_negative_words, all_words.values())
-        count_total_pmi(positive_pmi, negative_pmi)
-        write_total_pmi_to_file()
-        get_tag_by_jieba_keyword(all_words.keys())
+        all_words_total_pmi = count_total_pmi(positive_pmi, negative_pmi)
+        write_total_pmi_to_file(all_words_total_pmi)
+        get_tag_by_jieba_keyword(all_words.keys(), all_words_total_pmi)
 
 
 if __name__ == '__main__':
