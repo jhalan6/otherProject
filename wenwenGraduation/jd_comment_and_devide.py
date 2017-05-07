@@ -409,9 +409,51 @@ def write_total_pmi_to_file(all_word_total_pmi):
 
 
 
-def get_tag_by_jieba_keyword(sents, all_words_total_pmi):
+def get_tag_by_jieba_keyword(all_words, all_words_total_pmi, tag_file):
+        """
+            根据语句及所有词的PMI值进行分析，利用jieba提取关键字的方法
+            过滤出5个关键词,并将5个关键词对应的PMI数据导出成matlab可读的数据文件
+
+            如果提供了tag文件，同时根据文件内的tag信息生成对应的tag文件
+            Args:
+                all_words: 一个字典类型的数据。key是需要分词的句子，value是分词
+                    结果组成的一个list
+                    举例：{
+                    "今天是个好日子":["今天", "是个", "好", "日子"],
+                    "这个手机真不错":["这个", "手机", "真", "不错"],
+                    "我今天买手机":["我","今天","买","手机"]
+                    }
+                all_wors_total_pmi : 所有词的PMI值
+                tag_file : 针对每一个语句打过tag的文件名
+                            注意，文件内的语句就是第一步抓取的结果
+                    举例:
+                        文件名: tag_list.txt
+                        文件内容 :
+                            这手机是假的|0
+                            这手机真不错|1
+            Returns:
+                输出sentences_pmi_mat.txt文件，文件格式:
+                    3.33 4.33 8.99 1.83 8.42
+                    3.33 4.33 8.99 1.83 8.42
+                    3.33 4.33 8.99 1.83 8.42
+                可以直接在matlab中利用load('sentences_pmi_mat.txt')导入
+
+                输出sentences_tag_mat.txt文件，文件格式:
+                    1
+                    0
+                    1
+                    1
+        """
         matlab_file_content = []
-        for sent in sents:
+        matlab_tag_content = []
+        tag_dict = {}
+        if tag_file:
+            for line in open(tag_file):
+                sent = line[:-1].split('|')[0]
+                tag = line[:-1].split('|')[1]
+                tag_dict[sent] = tag
+
+        for sent in all_words.keys():
             tags = jieba.analyse.extract_tags(sent, 5)
             pmi_list = []
             for tag in tags:
@@ -420,7 +462,14 @@ def get_tag_by_jieba_keyword(sents, all_words_total_pmi):
                 pmi_list.append(0)
             print '%s|%s|%s' % (sent, ','.join(tags), ','.join([str(item) for item in pmi_list]))
             matlab_file_content.append("%s\n" % (','.join([str(item) for item in pmi_list])))
-        write_to_file("sentences_pmi.txt", matlab_file_content)
+            if tag_file:
+                matlab_tag_content.append('%s\n' % (tag_dict[sent]))
+
+        write_to_file("sentences_pmi_mat.txt", matlab_file_content)
+        if tag_file:
+            write_to_file("sentences_tag_mat.txt", matlab_tag_content)
+
+
 
 
 def main():
@@ -439,7 +488,10 @@ def main():
         #negative_pmi = count_pmi_of_all_words(all_words_set, all_negative_words, all_words.values())
         all_words_total_pmi = count_total_pmi(positive_pmi, negative_pmi)
         write_total_pmi_to_file(all_words_total_pmi)
-        get_tag_by_jieba_keyword(all_words.keys(), all_words_total_pmi)
+
+        # 打好tag，存好文件，可以使用上面的这个，会生成matlab中tag的文件
+        #get_tag_by_jieba_keyword(all_words, all_words_total_pmi, "tag_list.txt")
+        get_tag_by_jieba_keyword(all_words, all_words_total_pmi, None)
 
 
 if __name__ == '__main__':
