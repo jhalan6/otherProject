@@ -154,6 +154,8 @@ def fetch_all_words_from_jieba(file_name):
                     }
 
         """
+        # 导入自定义分词词典
+        jieba.load_userdict("./word_dict.txt")
         all_words = {}
         for line in open(file_name):
             seg_list = list(jieba.cut(line, cut_all=True))
